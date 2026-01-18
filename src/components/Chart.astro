@@ -4,34 +4,44 @@
 
 ---
 <div>
+  <!-- 公式ドキュメントのチュートリアル -->
   <div style="width: 500px;"><canvas id="dimensions"></canvas></div><br />
-  <canvas id="myChart"></canvas>
+  <canvas id="myChart"></canvas><br />
+  <!-- 公式ドキュメントのチュートリアル -->
+
+  <!-- 折れ線グラフ追加してみた -->
+  <canvas id="lineGraph"></canvas>
 </div>
 
 <script>
   import {
-  Chart,
-  Colors,
-  BarController,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BubbleController,
-  PointElement,
-  Legend
-} from 'chart.js'
-Chart.register(
-  Colors,
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  BubbleController,
-  PointElement,
-  Legend
-);
+    Chart,
+    Colors,
+    BarController,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    BubbleController,
+    PointElement,
+    LineController,
+    LineElement,
+    Legend,
+  } from "chart.js";
+  Chart.register(
+    Colors,
+    BarController,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    BubbleController,
+    PointElement,
+    LineController,
+    LineElement,
+    Legend,
+  );
   import cubejs from "@cubejs-client/core";
   import type { Query } from "@cubejs-client/core";
+  import { lineConfig } from "../ts/lineGraph";
 
   const apiUrl =
     "https://heavy-lansford.gcp-us-central1.cubecloudapp.dev/cubejs-api/v1";
@@ -139,10 +149,13 @@ Chart.register(
   const dimeData = await getDimensions();
 
   const chartAreaBorder = {
-    id: 'chartAreaBorder',
+    id: "chartAreaBorder",
 
-    beforeDraw(chart:any, args:any, options:any) {
-      const { ctx, chartArea: { left, top, width, height } } = chart;
+    beforeDraw(chart: any, args: any, options: any) {
+      const {
+        ctx,
+        chartArea: { left, top, width, height },
+      } = chart;
 
       ctx.save();
       ctx.strokeStyle = options.borderColor;
@@ -151,7 +164,7 @@ Chart.register(
       ctx.lineDashOffset = options.borderDashOffset;
       ctx.strokeRect(left, top, width, height);
       ctx.restore();
-    }
+    },
   };
 
   new Chart(dime, {
@@ -167,54 +180,58 @@ Chart.register(
               y: row.height,
               r: row.count,
             })),
-          },
+        },
         {
           label: "width > height",
           data: dimeData
-          .filter((row) => row.width > row.height)
-          .map((row) => ({
-            x: row.width,
-            y: row.height,
-            r: row.count,
-          })),
+            .filter((row) => row.width > row.height)
+            .map((row) => ({
+              x: row.width,
+              y: row.height,
+              r: row.count,
+            })),
         },
         {
           label: "width < height",
           data: dimeData
-          .filter((row) => row.width < row.height)
-          .map((row) => ({
-            x: row.width,
-            y: row.height,
-            r: row.count,
-          })),
+            .filter((row) => row.width < row.height)
+            .map((row) => ({
+              x: row.width,
+              y: row.height,
+              r: row.count,
+            })),
         },
       ],
     },
-    plugins: [ chartAreaBorder ] as any,
+    plugins: [chartAreaBorder] as any,
     options: {
       plugins: {
-          chartAreaBorder: {
-            borderColor: 'red',
-            borderWidth: 2,
-            borderDash: [ 5, 5 ],
-            borderDashOffset: 2,
-          }
+        chartAreaBorder: {
+          borderColor: "red",
+          borderWidth: 2,
+          borderDash: [5, 5],
+          borderDashOffset: 2,
         },
+      },
       aspectRatio: 1,
       scales: {
         x: {
           max: 500,
           ticks: {
-            callback: (value: number) => `${(value) / 100} m`,
+            callback: (value: number) => `${value / 100} m`,
           },
         },
         y: {
           max: 500,
           ticks: {
-            callback: (value: number) => `${(value) / 100} m`,
+            callback: (value: number) => `${value / 100} m`,
           },
         },
       },
     } as any,
   });
+
+  const line = document.getElementById("lineGraph") as HTMLCanvasElement;
+
+  new Chart(line, lineConfig);
 </script>
