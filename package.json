@@ -9,6 +9,8 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.16.11"
+    "@cubejs-client/core": "^1.6.4",
+    "astro": "^5.16.11",
+    "chart.js": "^4.5.1"
   }
 }

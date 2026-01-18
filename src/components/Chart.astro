@@ -1,0 +1,220 @@
+---
+
+---
+
+---
+<div>
+  <div style="width: 500px;"><canvas id="dimensions"></canvas></div><br />
+  <canvas id="myChart"></canvas>
+</div>
+
+<script>
+  import {
+  Chart,
+  Colors,
+  BarController,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  BubbleController,
+  PointElement,
+  Legend
+} from 'chart.js'
+Chart.register(
+  Colors,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  BubbleController,
+  PointElement,
+  Legend
+);
+  import cubejs from "@cubejs-client/core";
+  import type { Query } from "@cubejs-client/core";
+
+  const apiUrl =
+    "https://heavy-lansford.gcp-us-central1.cubecloudapp.dev/cubejs-api/v1";
+  const cubeToken =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjEwMDAwMDAwMDAsImV4cCI6NTAwMDAwMDAwMH0.OHZOpOBVKr-sCwn8sbZ5UFsqI3uCs6e4omT7P6WVMFw";
+
+  // CubejsApi ではなく cubejs 関数を使用します
+  const cubeApi = cubejs(cubeToken, { apiUrl });
+
+  export async function getAquisitionsByYear() {
+    const acquisitionsByYearQuery: Query = {
+      dimensions: ["Artworks.yearAcquired"],
+      measures: ["Artworks.count"],
+      filters: [
+        {
+          member: "Artworks.yearAcquired",
+          operator: "set",
+        },
+      ],
+      order: {
+        "Artworks.yearAcquired": "asc",
+      },
+    };
+
+    // load メソッドでデータを取得
+    const resultSet = await cubeApi.load(acquisitionsByYearQuery);
+
+    return resultSet.tablePivot().map((row) => ({
+      // row[key] は文字列または数値で返るため、安全にパースします
+      year: parseInt(row["Artworks.yearAcquired"]?.toString() || "0"),
+      count: parseInt(row["Artworks.count"]?.toString() || "0"),
+    }));
+  }
+
+  export async function getDimensions() {
+    const dimensionsQuery: Query = {
+      dimensions: ["Artworks.widthCm", "Artworks.heightCm"],
+      measures: ["Artworks.count"],
+      filters: [
+        {
+          member: "Artworks.classification",
+          operator: "equals",
+          values: ["Painting"],
+        },
+        {
+          member: "Artworks.widthCm",
+          operator: "set",
+        },
+        {
+          member: "Artworks.widthCm",
+          operator: "lt",
+          values: ["500"],
+        },
+        {
+          member: "Artworks.heightCm",
+          operator: "set",
+        },
+        {
+          member: "Artworks.heightCm",
+          operator: "lt",
+          values: ["500"],
+        },
+      ],
+    };
+
+    const resultSet = await cubeApi.load(dimensionsQuery);
+
+    return resultSet.tablePivot().map((row) => ({
+      width: parseInt(row["Artworks.widthCm"]?.toString() || "0"),
+      height: parseInt(row["Artworks.heightCm"]?.toString() || "0"),
+      count: parseInt(row["Artworks.count"]?.toString() || "0"),
+    }));
+  }
+
+  const data = await getAquisitionsByYear();
+
+  const ctx = document.getElementById("myChart") as HTMLCanvasElement;
+
+  new Chart(ctx, {
+    type: "bar",
+    options: {
+      animation: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          enabled: false,
+        },
+      },
+    },
+    data: {
+      labels: data.map((row) => row.year),
+      datasets: [
+        {
+          label: "Acquisitions by year",
+          data: data.map((row) => row.count),
+        },
+      ],
+    },
+  });
+
+  const dime = document.getElementById("dimensions") as HTMLCanvasElement;
+
+  const dimeData = await getDimensions();
+
+  const chartAreaBorder = {
+    id: 'chartAreaBorder',
+
+    beforeDraw(chart:any, args:any, options:any) {
+      const { ctx, chartArea: { left, top, width, height } } = chart;
+
+      ctx.save();
+      ctx.strokeStyle = options.borderColor;
+      ctx.lineWidth = options.borderWidth;
+      ctx.setLineDash(options.borderDash || []);
+      ctx.lineDashOffset = options.borderDashOffset;
+      ctx.strokeRect(left, top, width, height);
+      ctx.restore();
+    }
+  };
+
+  new Chart(dime, {
+    type: "bubble",
+    data: {
+      datasets: [
+        {
+          label: "width = height",
+          data: dimeData
+            .filter((row) => row.width === row.height)
+            .map((row) => ({
+              x: row.width,
+              y: row.height,
+              r: row.count,
+            })),
+          },
+        {
+          label: "width > height",
+          data: dimeData
+          .filter((row) => row.width > row.height)
+          .map((row) => ({
+            x: row.width,
+            y: row.height,
+            r: row.count,
+          })),
+        },
+        {
+          label: "width < height",
+          data: dimeData
+          .filter((row) => row.width < row.height)
+          .map((row) => ({
+            x: row.width,
+            y: row.height,
+            r: row.count,
+          })),
+        },
+      ],
+    },
+    plugins: [ chartAreaBorder ] as any,
+    options: {
+      plugins: {
+          chartAreaBorder: {
+            borderColor: 'red',
+            borderWidth: 2,
+            borderDash: [ 5, 5 ],
+            borderDashOffset: 2,
+          }
+        },
+      aspectRatio: 1,
+      scales: {
+        x: {
+          max: 500,
+          ticks: {
+            callback: (value: number) => `${(value) / 100} m`,
+          },
+        },
+        y: {
+          max: 500,
+          ticks: {
+            callback: (value: number) => `${(value) / 100} m`,
+          },
+        },
+      },
+    } as any,
+  });
+</script>
